@@ -29,7 +29,7 @@ this README contains several informative sections:
 Disclaimer
 ==========
 
-> This enhancement depends on an additional Rice parameter, which was never checked into Subversion, so it has been included here under [local files/KATTS-47.sql](local files/KATTS-47.sql).
+> This enhancement depends on an additional Rice parameter, which was never checked into Subversion, so it has been included here under [extra_files/KATTS-47.sql](extra_files/KATTS-47.sql).
 
 <h2>Jiras</h2>
 
