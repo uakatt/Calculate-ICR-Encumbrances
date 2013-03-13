@@ -26,6 +26,11 @@ this README contains several informative sections:
   explicitly included in the enhancement. The enhancement may rely on these files, and they may
   not be a part of the original release. They may also include functional and technical specifications.
 
+Disclaimer
+==========
+
+> This enhancement depends on an additional Rice parameter, which was never checked into Subversion, so it has been included here under [local files/KATTS-47.sql].
+
 <h2>Jiras</h2>
 
 This is a list of Jira tickets at the University of Arizona that relate to this modification. The subversion revisions tagged against each such jira are also listed:
