@@ -1,0 +1,13 @@
+Index: financial-system/kfs/trunk/work/src/edu/arizona/kfs/gl/dataaccess/impl/IcrEncumbranceDaoJdbc.java
+===================================================================
+--- financial-system/kfs/trunk/work/src/edu/arizona/kfs/gl/dataaccess/impl/IcrEncumbranceDaoJdbc.java	(revision 25337)
++++ financial-system/kfs/trunk/work/src/edu/arizona/kfs/gl/dataaccess/impl/IcrEncumbranceDaoJdbc.java	(revision 25338)
+@@ -34,7 +34,7 @@
+ public class IcrEncumbranceDaoJdbc extends PlatformAwareDaoBaseJdbc implements IcrEncumbranceDao {
+     private static final String ENCUMBRANCE_BAL_TYP_IC = "IC";
+     private static final String DOC_TYP_ICRN = "ICRN";
+-    private static final String INCLUDED_FIN_BAL_TYP_CODES = "'IE','EX'";
++    private static final String INCLUDED_FIN_BAL_TYP_CODES = "'IE','EX','PE'";
+     private static final String INCLUDED_FIN_OBJ_TYP_CODES = "'EX', 'EE', 'ES'";
+     private static final String FS_ORIGIN_CODE_MF = "MF";
+     private static Logger LOG = Logger.getLogger(IcrEncumbranceDaoJdbc.class);

@@ -1,0 +1,130 @@
+Index: financial-system/kfs/trunk/work/src/edu/arizona/kfs/gl/batch/IcrEncumbranceFeedStep.java
+===================================================================
+--- financial-system/kfs/trunk/work/src/edu/arizona/kfs/gl/batch/IcrEncumbranceFeedStep.java	(revision 25643)
++++ financial-system/kfs/trunk/work/src/edu/arizona/kfs/gl/batch/IcrEncumbranceFeedStep.java	(revision 25644)
+@@ -32,7 +32,7 @@
+      * @return Returns the icrEncumbranceService.
+      */
+     public IcrEncumbranceService getIcrEncumbranceService() {
+-	return icrEncumbranceService;
++        return icrEncumbranceService;
+     }
+ 
+     /**
+@@ -42,14 +42,14 @@
+      *            The icrEncumbranceService to set.
+      */
+     public void setIcrEncumbranceService(IcrEncumbranceService icrEncumbranceService) {
+-	this.icrEncumbranceService = icrEncumbranceService;
++        this.icrEncumbranceService = icrEncumbranceService;
+     }
+ 
+     @Override
+     public boolean execute(String jobName, Date jobRunDate) throws InterruptedException {
+-	LOG.info("Starting buildIcrEncumbranceFeed");
+-	icrEncumbranceService.buildIcrEncumbranceFeed();
+-	LOG.info("Finished buildIcrEncumbranceFeed");
+-	return true;
++        LOG.info("Starting buildIcrEncumbranceFeed");
++        icrEncumbranceService.buildIcrEncumbranceFeed();
++        LOG.info("Finished buildIcrEncumbranceFeed");
++        return true;
+     }
+ }
+Index: financial-system/kfs/trunk/work/src/edu/arizona/kfs/gl/batch/service/impl/IcrEncumbranceServiceImpl.java
+===================================================================
+--- financial-system/kfs/trunk/work/src/edu/arizona/kfs/gl/batch/service/impl/IcrEncumbranceServiceImpl.java	(revision 25643)
++++ financial-system/kfs/trunk/work/src/edu/arizona/kfs/gl/batch/service/impl/IcrEncumbranceServiceImpl.java	(revision 25644)
+@@ -39,7 +39,7 @@
+      * @return Returns the icrEncumbranceDao.
+      */
+     public IcrEncumbranceDao getIcrEncumbranceDao() {
+-	return icrEncumbranceDao;
++        return icrEncumbranceDao;
+     }
+ 
+     /**
+@@ -49,7 +49,7 @@
+      *            The icrEncumbranceDao to set.
+      */
+     public void setIcrEncumbranceDao(IcrEncumbranceDao icrEncumbranceDao) {
+-	this.icrEncumbranceDao = icrEncumbranceDao;
++        this.icrEncumbranceDao = icrEncumbranceDao;
+     }
+ 
+     /**
+@@ -58,7 +58,7 @@
+      * @return Returns the directoryName.
+      */
+     public String getDirectoryName() {
+-	return directoryName;
++        return directoryName;
+     }
+ 
+     /**
+@@ -68,37 +68,37 @@
+      *            The directoryName to set.
+      */
+     public void setDirectoryName(String directoryName) {
+-	this.directoryName = directoryName;
++        this.directoryName = directoryName;
+     }
+ 
+     @Override
+     public File buildIcrEncumbranceFeed() {
+-	File fileLoc = null;
+-	Integer currentFiscalYear = SpringContext.getBean(UniversityDateService.class).getCurrentFiscalYear();
+-	try {
+-	    // make directory structure if doesn't exist
+-	    new File(getDirectoryName()).mkdirs();
+-	    fileLoc = new File(getDirectoryName(), "icr_encumbrance_feed_" + new SimpleDateFormat("yyyy_MM_dd").format(new Date()) + ".txt");
+-	    LOG.info("ICR Encumbrance feed location is " + fileLoc.getPath());
+-	    BufferedWriter fw = new BufferedWriter(new FileWriter(fileLoc));
+-	    try {
+-		icrEncumbranceDao.buildIcrEncumbranceFeed(currentFiscalYear, fw);
+-	    } finally {
+-		if (fw != null) {
+-		    fw.flush();
+-		    fw.close();
+-		}
+-	    }
+-	} catch (Exception ex) {
+-	    try {
+-		if (fileLoc != null) {
+-		    fileLoc.delete();
+-		}
+-	    } catch (Exception ee) {
+-		LOG.error("Failed to delete even though process failed" + fileLoc);
+-	    }
+-	    throw new RuntimeException("Error, see the stack trace.", ex);
+-	}
+-	return fileLoc;
++        File fileLoc = null;
++        Integer currentFiscalYear = SpringContext.getBean(UniversityDateService.class).getCurrentFiscalYear();
++        try {
++            // make directory structure if doesn't exist
++            new File(getDirectoryName()).mkdirs();
++            fileLoc = new File(getDirectoryName(), "icr_encumbrance_feed_" + new SimpleDateFormat("yyyy_MM_dd").format(new Date()) + ".txt");
++            LOG.info("ICR Encumbrance feed location is " + fileLoc.getPath());
++            BufferedWriter fw = new BufferedWriter(new FileWriter(fileLoc));
++            try {
++                icrEncumbranceDao.buildIcrEncumbranceFeed(currentFiscalYear, fw);
++            } finally {
++                if (fw != null) {
++                    fw.flush();
++                    fw.close();
++                }
++            }
++        } catch (Exception ex) {
++            try {
++                if (fileLoc != null) {
++                    fileLoc.delete();
++                }
++            } catch (Exception ee) {
++                LOG.error("Failed to delete even though process failed" + fileLoc);
++            }
++            throw new RuntimeException("Error, see the stack trace.", ex);
++        }
++        return fileLoc;
+     }
+ }

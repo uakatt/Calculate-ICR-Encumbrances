@@ -1,0 +1,182 @@
+Index: financial-system/kfs/trunk/work/src/edu/arizona/kfs/gl/dataaccess/impl/IcrEncumbranceDaoJdbc.java
+===================================================================
+--- financial-system/kfs/trunk/work/src/edu/arizona/kfs/gl/dataaccess/impl/IcrEncumbranceDaoJdbc.java	(revision 28632)
++++ financial-system/kfs/trunk/work/src/edu/arizona/kfs/gl/dataaccess/impl/IcrEncumbranceDaoJdbc.java	(revision 28633)
+@@ -34,44 +34,84 @@
+ public class IcrEncumbranceDaoJdbc extends PlatformAwareDaoBaseJdbc implements IcrEncumbranceDao {
+     private static Logger LOG = Logger.getLogger(IcrEncumbranceDaoJdbc.class);
+     
++    private static final String COST_SHARE_SUB_ACCT_TYPE = "CS";
+     private static final String INCLUDED_FIN_BAL_TYP_CODES = "'IE','EX','PE'";
+     private static final String INCLUDED_FIN_OBJ_TYP_CODES = "'EX', 'EE', 'ES'";
+     
+     @Override
+     public void buildIcrEncumbranceFeed(Integer fiscalYear, final String icrEncumbOriginCode, final Writer fw) throws IOException {
++    final String rateSql = "select distinct t1.univ_fiscal_yr, t1.fin_coa_cd, t1.account_nbr, t1.sub_acct_nbr, "
++        +   getDbPlatform().getIsNullFunction("t3.fin_series_id", "t2.fin_series_id") + " fin_series_id, " + getDbPlatform().getIsNullFunction("t3.icr_typ_cd", "t2.acct_icr_typ_cd") + " acct_icr_typ_cd "
++        +  "from gl_encumbrance_t t1 join ca_account_t t2 on (t1.fin_coa_cd = t2.fin_coa_cd and t1.account_nbr = t2.account_nbr) " 
++        +  "left join ca_a21_sub_acct_t t3 on (t1.fin_coa_cd = t3.fin_coa_cd and t1.account_nbr = t3.account_nbr and t1.sub_acct_nbr = t3.sub_acct_nbr) "
++        +  "where t1.fin_balance_typ_cd in (" + INCLUDED_FIN_BAL_TYP_CODES + ") and t1.fs_origin_cd <> '" + icrEncumbOriginCode + "' "
++        +  "and t1.univ_fiscal_yr >= " + fiscalYear + " "
++        +  "and (t3.sub_acct_typ_cd is null or t3.sub_acct_typ_cd <> '" + COST_SHARE_SUB_ACCT_TYPE + "') ";
+         
+-    final String encumbSql = "select t1.univ_fiscal_yr, t1.fin_coa_cd, t1.account_nbr, t1.sub_acct_nbr, t5.fin_object_cd, t1.fin_balance_typ_cd, "
+-		+ "t1.fdoc_typ_cd, t1.fdoc_nbr, "
+-		+ "sum(" + getDbPlatform().getIsNullFunction("t1.acln_encum_amt - t1.acln_encum_cls_amt", "0") + " * " + getDbPlatform().getIsNullFunction("t5.awrd_icr_rate_pct", "0") + " * .01) encumb_amt  "
+-		+ "from gl_encumbrance_t t1 join ca_account_t t3 on "
+-		+ "t1.fin_coa_cd = t3.fin_coa_cd and t1.account_nbr = t3.account_nbr join ca_object_code_t t4 on t4.univ_fiscal_yr = t1.univ_fiscal_yr "
+-		+ "and t4.fin_coa_cd = t1.fin_coa_cd and t4.fin_object_cd = t1.fin_object_cd "
+-		+ " join ca_icr_auto_entr_t t5 on t5.fin_series_id = t3.fin_series_id and t5.univ_fiscal_yr = t1.univ_fiscal_yr " + "where t1.fin_balance_typ_cd in (" + INCLUDED_FIN_BAL_TYP_CODES
+-		+ ") and t1.fs_origin_cd <> '" + icrEncumbOriginCode + "' and t4.fin_obj_typ_cd IN (" + INCLUDED_FIN_OBJ_TYP_CODES + ") "
+-		+ "and t5.trn_debit_crdt_cd = 'D' and not exists (select 1 from ca_icr_excl_type_t where acct_icr_typ_cd = t3.acct_icr_typ_cd "
+-		+ "and acct_icr_excl_typ_actv_ind = 'Y' and fin_object_cd = t1.fin_object_cd) and t1.univ_fiscal_yr >= " + fiscalYear
+-		+ " group by t1.univ_fiscal_yr, t1.fin_coa_cd, t1.account_nbr, t1.sub_acct_nbr, t5.fin_object_cd, t1.fin_balance_typ_cd, "
+-		+ "t1.fdoc_typ_cd, t1.fdoc_nbr";
+-	
+-	final String icrSql = "select sum(" + getDbPlatform().getIsNullFunction("acln_encum_amt - acln_encum_cls_amt", "0") + ") current_amt " 
+-	              + "from gl_encumbrance_t where univ_fiscal_yr = ? and fin_coa_cd = ? and account_nbr = ? and sub_acct_nbr = ? and fin_object_cd = ? "
+-	              + "and fin_balance_typ_cd = ? and fdoc_typ_cd = ? and fdoc_nbr = ? and fs_origin_cd = '" + icrEncumbOriginCode + "' ";
+ 
+-	getJdbcTemplate().query(encumbSql, new ResultSetExtractor() {
+-	    @Override
++        getJdbcTemplate().query(rateSql, new ResultSetExtractor() {
++            @Override
+             public Object extractData(ResultSet rs) throws SQLException, DataAccessException {
+                 try {
+                     String newLine = System.getProperty("line.separator");
+                     while (rs.next()) {
++                        String fin_series_id = rs.getString("fin_series_id");
++                        String acct_icr_typ_cd = rs.getString("acct_icr_typ_cd");
+                         String fiscalYear = rs.getString("univ_fiscal_yr");
+                         String chartCode = rs.getString("fin_coa_cd");
+                         String accountNbr = rs.getString("account_nbr");
+                         String subAccountNbr = rs.getString("sub_acct_nbr");
++                        
++                        Object[] encArgs = new String[6];
++                        encArgs[0] = fin_series_id;
++                        encArgs[1] = acct_icr_typ_cd;
++                        encArgs[2] = fiscalYear;
++                        encArgs[3] = chartCode;
++                        encArgs[4] = accountNbr;
++                        encArgs[5] = subAccountNbr;
++                        
++                        executeEncumbranceSql(icrEncumbOriginCode, encArgs, fw);
++                    }
++                }
++                catch (Exception e) {
++                    throw new RuntimeException(e);
++                }
++
++                return null;
++            }
++        });
++    }
++    
++    protected void executeEncumbranceSql(final String icrEncumbOriginCode, Object[] encArgs, final Writer fw) {
++        final String encumbSql = "select t1.univ_fiscal_yr, t1.fin_coa_cd, t1.account_nbr, t1.sub_acct_nbr, t5.fin_object_cd, t1.fin_balance_typ_cd, "
++                + "t1.fdoc_typ_cd, t1.fdoc_nbr, " + "sum(" + getDbPlatform().getIsNullFunction("t1.acln_encum_amt - t1.acln_encum_cls_amt", "0") + " * " 
++                +  getDbPlatform().getIsNullFunction("t5.awrd_icr_rate_pct", "0") + " * .01) encumb_amt  " + "from gl_encumbrance_t t1 "
++                + "join ca_icr_auto_entr_t t5 on t5.fin_series_id = ? and t5.univ_fiscal_yr = t1.univ_fiscal_yr "
++                + "and t5.trn_debit_crdt_cd = 'D' " 
++                + "join ca_object_code_t t4 on t4.univ_fiscal_yr = t1.univ_fiscal_yr and t4.fin_coa_cd = t1.fin_coa_cd and t4.fin_object_cd = t1.fin_object_cd "
++                + "where not exists (select 1 from ca_icr_excl_type_t where acct_icr_typ_cd = ? "
++                + "and acct_icr_excl_typ_actv_ind = 'Y' and fin_object_cd = t1.fin_object_cd) "
++                + "and t1.univ_fiscal_yr = ? and t1.fin_coa_cd = ? and t1.account_nbr = ? and t1.sub_acct_nbr = ? "
++                + "and t1.fin_balance_typ_cd in (" + INCLUDED_FIN_BAL_TYP_CODES + ") and t1.fs_origin_cd <> '" + icrEncumbOriginCode + "' "
++                + "and t4.fin_obj_typ_cd IN (" + INCLUDED_FIN_OBJ_TYP_CODES + ") "
++                + "group by t1.univ_fiscal_yr, t1.fin_coa_cd, t1.account_nbr, t1.sub_acct_nbr, t5.fin_object_cd, t1.fin_balance_typ_cd, "
++                + "t1.fdoc_typ_cd, t1.fdoc_nbr";
++
++        getJdbcTemplate().query(encumbSql, encArgs, new ResultSetExtractor() {
++            @Override
++            public Object extractData(ResultSet rs) throws SQLException, DataAccessException {
++                try {
++                    String newLine = System.getProperty("line.separator");
++                    while (rs.next()) {
++                        String fiscalYear = rs.getString("univ_fiscal_yr");
++                        String chartCode = rs.getString("fin_coa_cd");
++                        String accountNbr = rs.getString("account_nbr");
++                        String subAccountNbr = rs.getString("sub_acct_nbr");
+                         String objectCode = rs.getString("fin_object_cd");
+                         String balanceType = rs.getString("fin_balance_typ_cd");
+                         String docType = rs.getString("fdoc_typ_cd");
+                         String docNbr = rs.getString("fdoc_nbr");
+-                       
++
+                         KualiDecimal encumb_amt = new KualiDecimal(rs.getDouble("encumb_amt"));
+                         KualiDecimal current_amt = KualiDecimal.ZERO;
+ 
+@@ -85,21 +125,7 @@
+                         icrArgs[6] = docType;
+                         icrArgs[7] = docNbr;
+ 
+-                        Double icrAmount = (Double) getJdbcTemplate().query(icrSql, icrArgs, new ResultSetExtractor() {
+-                            @Override
+-                            public Object extractData(ResultSet rs) throws SQLException, DataAccessException {
+-                                try {
+-                                    if (rs.next()) {
+-                                      return rs.getDouble("current_amt");
+-                                    }
+-                                    
+-                                    return null;
+-                                }
+-                                catch (Exception e) {
+-                                    throw new RuntimeException(e);
+-                                }
+-                            }
+-                        });
++                        Double icrAmount = getCurrentEncumbranceAmount(icrEncumbOriginCode, icrArgs);
+ 
+                         if (icrAmount != null) {
+                             current_amt = new KualiDecimal(icrAmount);
+@@ -110,13 +136,13 @@
+                             // ignore zero dollar amounts
+                             continue;
+                         }
+-                        
++
+                         String desc = "ICR Encumbrance " + docType + " " + docNbr;
+                         String debitCreditInd = "D";
+                         if (new_encumb_amt.isNegative()) {
+                             debitCreditInd = "C";
+                         }
+-                        
++
+                         fw.write("" + fiscalYear // Fiscal year 1-4
+                                 + chartCode // Chart code 5-6
+                                 + accountNbr // Account Number 7-13
+@@ -151,9 +177,33 @@
+                 catch (Exception e) {
+                     throw new RuntimeException(e);
+                 }
+-                
++
+                 return null;
+             }
+         });
+     }
++    
++    protected Double getCurrentEncumbranceAmount(final String icrEncumbOriginCode, Object[] icrArgs) {
++        final String icrSql = "select sum(" + getDbPlatform().getIsNullFunction("acln_encum_amt - acln_encum_cls_amt", "0") + ") current_amt " 
++                + "from gl_encumbrance_t where univ_fiscal_yr = ? and fin_coa_cd = ? and account_nbr = ? and sub_acct_nbr = ? and fin_object_cd = ? "
++                + "and fin_balance_typ_cd = ? and fdoc_typ_cd = ? and fdoc_nbr = ? and fs_origin_cd = '" + icrEncumbOriginCode + "' ";
++        
++        Double icrAmount = (Double) getJdbcTemplate().query(icrSql, icrArgs, new ResultSetExtractor() {
++            @Override
++            public Object extractData(ResultSet rs) throws SQLException, DataAccessException {
++                try {
++                    if (rs.next()) {
++                        return rs.getDouble("current_amt");
++                    }
++
++                    return null;
++                }
++                catch (Exception e) {
++                    throw new RuntimeException(e);
++                }
++            }
++        });
++
++        return icrAmount;
++    }
+ }

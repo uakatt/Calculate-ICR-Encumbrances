@@ -1,0 +1,13 @@
+Index: financial-system/kfs/trunk/work/src/edu/arizona/kfs/gl/dataaccess/impl/IcrEncumbranceDaoJdbc.java
+===================================================================
+--- financial-system/kfs/trunk/work/src/edu/arizona/kfs/gl/dataaccess/impl/IcrEncumbranceDaoJdbc.java	(revision 25058)
++++ financial-system/kfs/trunk/work/src/edu/arizona/kfs/gl/dataaccess/impl/IcrEncumbranceDaoJdbc.java	(revision 25059)
+@@ -62,7 +62,7 @@
+ 			    // ignore it
+ 			    continue;
+ 			}
+-			KualiDecimal encumb_amt = new KualiDecimal(rs.getDouble("encumb_amt")).multiply(new KualiDecimal((icrRate*100)));
++			KualiDecimal encumb_amt = new KualiDecimal(rs.getDouble("encumb_amt")).multiply(new KualiDecimal((icrRate/100)));
+ 			KualiDecimal current_amt = new KualiDecimal(rs.getDouble("current_amt"));
+ 			KualiDecimal new_encumb_amt = encumb_amt.subtract(current_amt);
+ 			if(new_encumb_amt.isZero()){

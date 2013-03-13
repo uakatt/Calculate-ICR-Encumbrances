@@ -1,0 +1,170 @@
+Index: work/src/org/kuali/kfs/gl/spring-gl.xml
+===================================================================
+--- work/src/org/kuali/kfs/gl/spring-gl.xml	(revision 25056)
++++ work/src/org/kuali/kfs/gl/spring-gl.xml	(revision 25059)
+@@ -62,6 +62,7 @@
+ 				<value>organizationReversionCurrentYearAccountJob</value>
+ 				<value>manualPurgeJob</value>
+ 				<value>posterBalancingHistorySyncJob</value>
++				<value>icrEncumbranceFeedJob</value>
+ 			</list>
+ 		</property>
+ 		<property name="fiscalYearMakers">
+Index: work/src/edu/arizona/kfs/gl/batch/IcrEncumbranceFeedStep.java
+===================================================================
+--- work/src/edu/arizona/kfs/gl/batch/IcrEncumbranceFeedStep.java	(revision 25056)
++++ work/src/edu/arizona/kfs/gl/batch/IcrEncumbranceFeedStep.java	(revision 25059)
+@@ -15,12 +15,15 @@
+  */
+ package edu.arizona.kfs.gl.batch;
+ 
+-import org.kuali.kfs.sys.batch.AbstractWrappedBatchStep;
+-import org.kuali.kfs.sys.batch.service.WrappedBatchExecutorService.CustomBatchExecutor;
++import java.util.Date;
+ 
++import org.apache.log4j.Logger;
++import org.kuali.kfs.sys.batch.AbstractStep;
++
+ import edu.arizona.kfs.gl.batch.service.IcrEncumbranceService;
+ 
+-public class IcrEncumbranceFeedStep extends AbstractWrappedBatchStep {
++public class IcrEncumbranceFeedStep extends AbstractStep {
++    private static Logger LOG = Logger.getLogger(IcrEncumbranceFeedStep.class);
+     private IcrEncumbranceService icrEncumbranceService;
+ 
+     /**
+@@ -43,13 +46,10 @@
+     }
+ 
+     @Override
+-    protected CustomBatchExecutor getCustomBatchExecutor() {
+-	return new CustomBatchExecutor() {
+-	    public boolean execute() {
+-		icrEncumbranceService.buildIcrEncumbranceFeed();
+-		return true;
+-	    }
+-	};
++    public boolean execute(String jobName, Date jobRunDate) throws InterruptedException {
++	LOG.info("Starting buildIcrEncumbranceFeed");
++	icrEncumbranceService.buildIcrEncumbranceFeed();
++	LOG.info("Finished buildIcrEncumbranceFeed");
++	return true;
+     }
+-
+ }
+Index: work/src/edu/arizona/kfs/gl/batch/service/impl/IcrEncumbranceServiceImpl.java
+===================================================================
+--- work/src/edu/arizona/kfs/gl/batch/service/impl/IcrEncumbranceServiceImpl.java	(revision 25056)
++++ work/src/edu/arizona/kfs/gl/batch/service/impl/IcrEncumbranceServiceImpl.java	(revision 25059)
+@@ -78,16 +78,25 @@
+ 	try {
+ 	    // make directory structure if doesn't exist
+ 	    new File(getDirectoryName()).mkdirs();
+-	    fileLoc = new File(getDirectoryName(), "icr_encumbrance_feed_" + new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss").format(new Date()) + ".txt");
++	    fileLoc = new File(getDirectoryName(), "icr_encumbrance_feed_" + new SimpleDateFormat("yyyy_MM_dd").format(new Date()) + ".txt");
+ 	    LOG.info("ICR Encumbrance feed location is " + fileLoc.getPath());
+ 	    BufferedWriter fw = new BufferedWriter(new FileWriter(fileLoc));
+ 	    try {
+ 		icrEncumbranceDao.buildIcrEncumbranceFeed(currentFiscalYear, fw);
+ 	    } finally {
+-		fw.flush();
+-		fw.close();
++		if (fw != null) {
++		    fw.flush();
++		    fw.close();
++		}
+ 	    }
+ 	} catch (Exception ex) {
++	    try {
++		if (fileLoc != null) {
++		    fileLoc.delete();
++		}
++	    } catch (Exception ee) {
++		LOG.error("Failed to delete even though process failed" + fileLoc);
++	    }
+ 	    throw new RuntimeException("Error, see the stack trace.", ex);
+ 	}
+ 	return fileLoc;
+Index: work/src/edu/arizona/kfs/gl/spring-gl.xml
+===================================================================
+--- work/src/edu/arizona/kfs/gl/spring-gl.xml	(revision 25056)
++++ work/src/edu/arizona/kfs/gl/spring-gl.xml	(revision 25059)
+@@ -391,8 +391,16 @@
+ 		<property name="icrEncumbranceDao" ref="icrEncumbranceDao"></property>
+ 	</bean>
+ 	
+-	<bean id="icrEncumbranceFeedStep" class="edu.arizona.kfs.gl.batch.IcrEncumbranceFeedStep" parent="wrappedStep">
++	<bean id="icrEncumbranceFeedStep" class="edu.arizona.kfs.gl.batch.IcrEncumbranceFeedStep" parent="step">
+ 		<property name="icrEncumbranceService" ref="icrEncumbranceService" />
+ 	</bean>
+ 	
++	<bean id="icrEncumbranceFeedJob" parent="unscheduledJobDescriptor">
++	<property name="steps">
++		<list>
++			<ref bean="icrEncumbranceFeedStep" />
++		</list>
++	</property>
++	</bean>
++	
+ </beans>
+\ No newline at end of file
+Index: work/src/edu/arizona/kfs/gl/dataaccess/impl/IcrEncumbranceDaoJdbc.java
+===================================================================
+--- work/src/edu/arizona/kfs/gl/dataaccess/impl/IcrEncumbranceDaoJdbc.java	(revision 25056)
++++ work/src/edu/arizona/kfs/gl/dataaccess/impl/IcrEncumbranceDaoJdbc.java	(revision 25059)
+@@ -36,20 +36,20 @@
+ 
+     @Override
+     public void buildIcrEncumbranceFeed(Integer fiscalYear, final Writer fw) throws IOException {
+-	String sql = "select t1.univ_fiscal_yr, t1.fin_coa_cd, t1.account_nbr, t1.sub_acct_nbr, t1.fin_object_cd, t1.fin_balance_typ_cd, "
+-		+ "t1.fdoc_typ_cd, t1.fs_origin_cd, t1.fdoc_nbr, t1.trn_encum_desc, sum(nvl(t1.acln_encum_amt - t1.acln_encum_cls_amt, 0)) encumb_amt, "
++	String sql = "select t1.univ_fiscal_yr, t1.fin_coa_cd, t1.account_nbr, t1.sub_acct_nbr, t5.fin_object_cd, t1.fin_balance_typ_cd, "
++		+ "t1.fdoc_typ_cd, t1.fs_origin_cd, t1.fdoc_nbr, t1.trn_encum_desc, nvl(t5.awrd_icr_rate_pct,0) icr_rate, sum(nvl(t1.acln_encum_amt - t1.acln_encum_cls_amt, 0)) encumb_amt, "
+ 		+ "sum(nvl(t2.acln_encum_amt - t2.acln_encum_cls_amt, 0)) current_amt from gl_encumbrance_t t1 left join gl_encumbrance_t t2 "
+ 		+ "on t1.univ_fiscal_yr = t2.univ_fiscal_yr and t1.account_nbr = t2.account_nbr and t1.sub_acct_nbr = t2.sub_acct_nbr and "
+ 		+ "t1.fin_object_cd = t2.fin_object_cd and t1.fin_sub_obj_cd = t2.fin_sub_obj_cd and t1.fin_balance_typ_cd = t2.fin_balance_typ_cd "
+ 		+ "and t1.fdoc_typ_cd = t2.fdoc_typ_cd and t1.fdoc_nbr = t2.fdoc_nbr and t2.fs_origin_cd = 'IC' join ca_account_t t3 on "
+-		+ "t1.fin_coa_cd = t3.fin_coa_cd and t1.account_nbr = t3.account_nbr left join ca_object_code_t t4 on t4.univ_fiscal_yr = t1.univ_fiscal_yr "
++		+ "t1.fin_coa_cd = t3.fin_coa_cd and t1.account_nbr = t3.account_nbr join ca_object_code_t t4 on t4.univ_fiscal_yr = t1.univ_fiscal_yr "
+ 		+ "and t4.fin_coa_cd = t1.fin_coa_cd and t4.fin_object_cd = t1.fin_object_cd "
+-		+ "left join ca_icr_auto_entr_t t5 on t5.fin_series_id = t3.fin_series_id and t5.univ_fiscal_yr = t1.univ_fiscal_yr "
++		+ " join ca_icr_auto_entr_t t5 on t5.fin_series_id = t3.fin_series_id and t5.univ_fiscal_yr = t1.univ_fiscal_yr "
+ 		+ "where t1.fin_balance_typ_cd in ('IE','EX') and t1.fs_origin_cd <> 'IC' and t4.fin_obj_typ_cd IN ('EX', 'EE', 'ES') "
+ 		+ "and not exists (select 1 from ca_icr_excl_type_t where acct_icr_typ_cd = t3.acct_icr_typ_cd "
+ 		+ "and acct_icr_excl_typ_actv_ind = 'Y' and fin_object_cd = t1.fin_object_cd) and t1.univ_fiscal_yr >= " + fiscalYear
+-		+ " group by t1.univ_fiscal_yr, t1.fin_coa_cd, t1.account_nbr, t1.sub_acct_nbr, t1.fin_object_cd, t1.fin_balance_typ_cd, "
+-		+ "t1.fdoc_typ_cd, t1.fs_origin_cd, t1.fdoc_nbr, t1.trn_encum_desc";
++		+ " group by t1.univ_fiscal_yr, t1.fin_coa_cd, t1.account_nbr, t1.sub_acct_nbr, t5.fin_object_cd, t1.fin_balance_typ_cd, "
++		+ "t1.fdoc_typ_cd, t1.fs_origin_cd, t1.fdoc_nbr, t1.trn_encum_desc, t5.awrd_icr_rate_pct";
+ 	LOG.info(sql);
+ 	getJdbcTemplate().query(sql, new ResultSetExtractor() {
+ 	    @Override
+@@ -57,9 +57,18 @@
+ 		try {
+ 		    String newLine = System.getProperty("line.separator");
+ 		    while (rs.next()) {
+-			KualiDecimal encumb_amt = new KualiDecimal(rs.getDouble("encumb_amt"));
++			double icrRate = rs.getDouble("icr_rate");
++			if (icrRate == 0) {
++			    // ignore it
++			    continue;
++			}
++			KualiDecimal encumb_amt = new KualiDecimal(rs.getDouble("encumb_amt")).multiply(new KualiDecimal((icrRate/100)));
+ 			KualiDecimal current_amt = new KualiDecimal(rs.getDouble("current_amt"));
+ 			KualiDecimal new_encumb_amt = encumb_amt.subtract(current_amt);
++			if(new_encumb_amt.isZero()){
++			    //ignore zero dollar amounts
++			    continue;
++			}
+ 			String debitCreditInd = "D";
+ 			if(new_encumb_amt.isNegative()){
+ 			    debitCreditInd = "C";
+@@ -78,7 +87,7 @@
+ 				+ "IC" //Origin Code     36-37
+ 				+ StringUtils.rightPad(rs.getString("fdoc_nbr"), 14) //Doc Number  38-51
+ 				+ StringUtils.rightPad("", 5) //Entry Seq Nbr   52-56
+-				+ StringUtils.rightPad(rs.getString("trn_encum_desc"), 40) //Description     57-96
++				+ StringUtils.rightPad("ICR Encumbrance", 40) //Description     57-96
+ 				+ StringUtils.leftPad(new_encumb_amt.abs().toString(), 20) //Amount 97-116
+ 				+ debitCreditInd //Debit/Credit    117-117
+ 				+ new SimpleDateFormat("yyyy-MM-dd").format(new Date()) //Trans Date      118-127

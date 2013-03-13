@@ -1,0 +1,13 @@
+Index: work/src/edu/arizona/kfs/gl/GlConstants.java
+===================================================================
+--- work/src/edu/arizona/kfs/gl/GlConstants.java	(revision 27211)
++++ work/src/edu/arizona/kfs/gl/GlConstants.java	(revision 27212)
+@@ -26,6 +26,6 @@
+     static final public String BATRAN_POSTER_ERROR_OUTPUT_FILE = "gl_batranerrs";
+     
+     
+-    public static final String ICR_ENCUMBRANCE_FEED_PARM_TYP = "ICREncumbranceFeedStep";
++    public static final String ICR_ENCUMBRANCE_FEED_PARM_TYP = "IcrEncumbranceFeedStep";
+     public static final String ICR_ENCUMBRANCE_ORIGIN_CODE_PARM_NM = "INDIRECT_COST_RECOVERY_ENCUMBRANCE_ORIGINATION";
+ }
+\ No newline at end of file

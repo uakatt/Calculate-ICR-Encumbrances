@@ -1,0 +1,131 @@
+Index: financial-system/kfs/trunk/work/src/edu/arizona/kfs/gl/GlConstants.java
+===================================================================
+--- financial-system/kfs/trunk/work/src/edu/arizona/kfs/gl/GlConstants.java	(revision 26932)
++++ financial-system/kfs/trunk/work/src/edu/arizona/kfs/gl/GlConstants.java	(revision 26933)
+@@ -19,11 +19,13 @@
+  * This class contains the constants being used by various general ledger components
+  */
+ public interface GlConstants {
+-
+     
+     // Batch File System
+     static final public String BATRAN_TRANSACTIONS_OUTPUT_FILE = "gl_batrantrans";
+     static final public String BATRAN_POSTER_INPUT_FILE = "gl_sortbatran";
+     static final public String BATRAN_POSTER_ERROR_OUTPUT_FILE = "gl_batranerrs";
+-
++    
++    
++    public static final String ICR_ENCUMBRANCE_FEED_PARM_TYP = "ICREncumbranceFeedStep";
++    public static final String ICR_ENCUMBRANCE_ORIGIN_CODE_PARM_NM = "INDIRECT_COST_RECOVERY_ENCUMBRANCE_ORIGINATION";
+ }
+\ No newline at end of file
+Index: financial-system/kfs/trunk/work/src/edu/arizona/kfs/gl/batch/service/impl/IcrEncumbranceServiceImpl.java
+===================================================================
+--- financial-system/kfs/trunk/work/src/edu/arizona/kfs/gl/batch/service/impl/IcrEncumbranceServiceImpl.java	(revision 26932)
++++ financial-system/kfs/trunk/work/src/edu/arizona/kfs/gl/batch/service/impl/IcrEncumbranceServiceImpl.java	(revision 26933)
+@@ -21,11 +21,15 @@
+ import java.text.SimpleDateFormat;
+ import java.util.Date;
+ 
++import org.apache.commons.lang.StringUtils;
+ import org.apache.log4j.Logger;
+ import org.kuali.kfs.gl.GeneralLedgerConstants;
++import org.kuali.kfs.sys.KFSConstants;
+ import org.kuali.kfs.sys.context.SpringContext;
+ import org.kuali.kfs.sys.service.UniversityDateService;
++import org.kuali.rice.kns.service.ParameterService;
+ 
++import edu.arizona.kfs.gl.GlConstants;
+ import edu.arizona.kfs.gl.batch.service.IcrEncumbranceService;
+ import edu.arizona.kfs.gl.dataaccess.IcrEncumbranceDao;
+ 
+@@ -39,14 +43,21 @@
+     @Override
+     public File buildIcrEncumbranceFeed() {
+         File encumbranceFeedFile = null;
++
+         Integer currentFiscalYear = SpringContext.getBean(UniversityDateService.class).getCurrentFiscalYear();
++        String icrEncumbOriginCode = SpringContext.getBean(ParameterService.class).getParameterValue(KFSConstants.ParameterNamespaces.GL, 
++                GlConstants.ICR_ENCUMBRANCE_FEED_PARM_TYP, GlConstants.ICR_ENCUMBRANCE_ORIGIN_CODE_PARM_NM);
++        if (StringUtils.isBlank(icrEncumbOriginCode)) {
++            throw new RuntimeException("ICR Encumbrance Origin Code parameter was blank, cannot create encumbrances without the configured origin code");
++        }
++        
+         try {
+             String enumbranceFeedFileName = "icr_encumbrance_feed_" + new SimpleDateFormat("yyyy_MM_dd").format(new Date()) + GeneralLedgerConstants.BatchFileSystem.EXTENSION; 
+             encumbranceFeedFile = new File(glOriginEntryDirectoryName + File.separator + enumbranceFeedFileName);
+             
+             BufferedWriter fw = new BufferedWriter(new FileWriter(encumbranceFeedFile));
+             try {
+-                icrEncumbranceDao.buildIcrEncumbranceFeed(currentFiscalYear, fw);
++                icrEncumbranceDao.buildIcrEncumbranceFeed(currentFiscalYear, icrEncumbOriginCode, fw);
+                 
+                 // create done file
+                 String enumbranceDoneFeedFileName = "icr_encumbrance_feed_" + new SimpleDateFormat("yyyy_MM_dd").format(new Date()) + GeneralLedgerConstants.BatchFileSystem.DONE_FILE_EXTENSION;
+Index: financial-system/kfs/trunk/work/src/edu/arizona/kfs/gl/dataaccess/impl/IcrEncumbranceDaoJdbc.java
+===================================================================
+--- financial-system/kfs/trunk/work/src/edu/arizona/kfs/gl/dataaccess/impl/IcrEncumbranceDaoJdbc.java	(revision 26932)
++++ financial-system/kfs/trunk/work/src/edu/arizona/kfs/gl/dataaccess/impl/IcrEncumbranceDaoJdbc.java	(revision 26933)
+@@ -32,32 +32,30 @@
+ import edu.arizona.kfs.gl.dataaccess.IcrEncumbranceDao;
+ 
+ public class IcrEncumbranceDaoJdbc extends PlatformAwareDaoBaseJdbc implements IcrEncumbranceDao {
+-    private static final String ENCUMBRANCE_BAL_TYP_IC = "IC";
+-    private static final String DOC_TYP_ICRN = "ICRN";
++    private static Logger LOG = Logger.getLogger(IcrEncumbranceDaoJdbc.class);
++    
+     private static final String INCLUDED_FIN_BAL_TYP_CODES = "'IE','EX','PE'";
+     private static final String INCLUDED_FIN_OBJ_TYP_CODES = "'EX', 'EE', 'ES'";
+-    private static final String FS_ORIGIN_CODE_MF = "MF";
+-    private static Logger LOG = Logger.getLogger(IcrEncumbranceDaoJdbc.class);
+-
++    
+     @Override
+-    public void buildIcrEncumbranceFeed(Integer fiscalYear, final Writer fw) throws IOException {
+-	final String encumbSql = "select t1.univ_fiscal_yr, t1.fin_coa_cd, t1.account_nbr, t1.sub_acct_nbr, t5.fin_object_cd, t1.fin_balance_typ_cd, "
++    public void buildIcrEncumbranceFeed(Integer fiscalYear, final String icrEncumbOriginCode, final Writer fw) throws IOException {
++        
++    final String encumbSql = "select t1.univ_fiscal_yr, t1.fin_coa_cd, t1.account_nbr, t1.sub_acct_nbr, t5.fin_object_cd, t1.fin_balance_typ_cd, "
+ 		+ "t1.fdoc_typ_cd, t1.fdoc_nbr, "
+ 		+ "sum(" + getDbPlatform().getIsNullFunction("t1.acln_encum_amt - t1.acln_encum_cls_amt", "0") + " * " + getDbPlatform().getIsNullFunction("t5.awrd_icr_rate_pct", "0") + " * .01) encumb_amt  "
+ 		+ "from gl_encumbrance_t t1 join ca_account_t t3 on "
+ 		+ "t1.fin_coa_cd = t3.fin_coa_cd and t1.account_nbr = t3.account_nbr join ca_object_code_t t4 on t4.univ_fiscal_yr = t1.univ_fiscal_yr "
+ 		+ "and t4.fin_coa_cd = t1.fin_coa_cd and t4.fin_object_cd = t1.fin_object_cd "
+ 		+ " join ca_icr_auto_entr_t t5 on t5.fin_series_id = t3.fin_series_id and t5.univ_fiscal_yr = t1.univ_fiscal_yr " + "where t1.fin_balance_typ_cd in (" + INCLUDED_FIN_BAL_TYP_CODES
+-		+ ") and t1.fs_origin_cd <> '" + FS_ORIGIN_CODE_MF + "' and t4.fin_obj_typ_cd IN (" + INCLUDED_FIN_OBJ_TYP_CODES + ") "
++		+ ") and t1.fs_origin_cd <> '" + icrEncumbOriginCode + "' and t4.fin_obj_typ_cd IN (" + INCLUDED_FIN_OBJ_TYP_CODES + ") "
+ 		+ "and t5.trn_debit_crdt_cd = 'D' and not exists (select 1 from ca_icr_excl_type_t where acct_icr_typ_cd = t3.acct_icr_typ_cd "
+ 		+ "and acct_icr_excl_typ_actv_ind = 'Y' and fin_object_cd = t1.fin_object_cd) and t1.univ_fiscal_yr >= " + fiscalYear
+ 		+ " group by t1.univ_fiscal_yr, t1.fin_coa_cd, t1.account_nbr, t1.sub_acct_nbr, t5.fin_object_cd, t1.fin_balance_typ_cd, "
+ 		+ "t1.fdoc_typ_cd, t1.fdoc_nbr";
+-	LOG.info(encumbSql);
+ 	
+ 	final String icrSql = "select sum(" + getDbPlatform().getIsNullFunction("acln_encum_amt - acln_encum_cls_amt", "0") + ") current_amt " 
+ 	              + "from gl_encumbrance_t where univ_fiscal_yr = ? and fin_coa_cd = ? and account_nbr = ? and sub_acct_nbr = ? and fin_object_cd = ? "
+-	              + "and fin_balance_typ_cd = ? and fdoc_typ_cd = ? and fdoc_nbr = ? and fs_origin_cd = '" + FS_ORIGIN_CODE_MF + "' ";
++	              + "and fin_balance_typ_cd = ? and fdoc_typ_cd = ? and fdoc_nbr = ? and fs_origin_cd = '" + icrEncumbOriginCode + "' ";
+ 
+ 	getJdbcTemplate().query(encumbSql, new ResultSetExtractor() {
+ 	    @Override
+@@ -129,7 +127,7 @@
+                                 + StringUtils.rightPad("", 2) // Object Type 28-29
+                                 + StringUtils.rightPad("", 2) // Fiscal Period 30-31
+                                 + StringUtils.rightPad(docType, 4) // Document Type 32-35
+-                                + FS_ORIGIN_CODE_MF // Origin Code 36-37
++                                + icrEncumbOriginCode // Origin Code 36-37
+                                 + StringUtils.rightPad(docNbr, 14) // Doc Number 38-51
+                                 + StringUtils.rightPad("", 5) // Entry Seq Nbr 52-56
+                                 + StringUtils.rightPad(StringUtils.substring(desc, 0, 40), 40) // Description 57-96
+Index: financial-system/kfs/trunk/work/src/edu/arizona/kfs/gl/dataaccess/IcrEncumbranceDao.java
+===================================================================
+--- financial-system/kfs/trunk/work/src/edu/arizona/kfs/gl/dataaccess/IcrEncumbranceDao.java	(revision 26932)
++++ financial-system/kfs/trunk/work/src/edu/arizona/kfs/gl/dataaccess/IcrEncumbranceDao.java	(revision 26933)
+@@ -20,6 +20,6 @@
+ 
+ public interface IcrEncumbranceDao {
+ 
+-    public void buildIcrEncumbranceFeed(Integer fiscalYear, Writer fw) throws IOException;
++    public void buildIcrEncumbranceFeed(Integer fiscalYear, String icrEncumbOriginCode, Writer fw) throws IOException;
+ 
+ }
+\ No newline at end of file

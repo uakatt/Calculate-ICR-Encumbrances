@@ -1,0 +1,13 @@
+Index: work/src/edu/arizona/kfs/gl/dataaccess/impl/IcrEncumbranceDaoJdbc.java
+===================================================================
+--- work/src/edu/arizona/kfs/gl/dataaccess/impl/IcrEncumbranceDaoJdbc.java	(revision 25213)
++++ work/src/edu/arizona/kfs/gl/dataaccess/impl/IcrEncumbranceDaoJdbc.java	(revision 25214)
+@@ -88,7 +88,7 @@
+ 				+ StringUtils.rightPad(rs.getString("sub_acct_nbr"), 5)//Sub Account 14-18
+ 				+ rs.getString("fin_object_cd") //Object Code     19-22
+ 				+ "---" //Sub Object      23-25
+-				+ ENCUMBRANCE_BAL_TYP_IC
++				+ rs.getString("fin_balance_typ_cd") //balance type code
+ 				+ StringUtils.rightPad("", 2) //Object Type     28-29
+ 				+ StringUtils.rightPad("", 2) //Fiscal Period   30-31
+ 				+ DOC_TYP_ICRN //Document Type   32-35

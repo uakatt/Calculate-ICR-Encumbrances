@@ -1,0 +1,22 @@
+Index: financial-system/kfs/trunk/work/src/edu/arizona/kfs/gl/dataaccess/impl/IcrEncumbranceDaoJdbc.java
+===================================================================
+--- financial-system/kfs/trunk/work/src/edu/arizona/kfs/gl/dataaccess/impl/IcrEncumbranceDaoJdbc.java	(revision 25578)
++++ financial-system/kfs/trunk/work/src/edu/arizona/kfs/gl/dataaccess/impl/IcrEncumbranceDaoJdbc.java	(revision 25579)
+@@ -56,7 +56,7 @@
+ 		+ " group by t1.univ_fiscal_yr, t1.fin_coa_cd, t1.account_nbr, t1.sub_acct_nbr, t5.fin_object_cd, t1.fin_balance_typ_cd, "
+ 		+ "t1.fdoc_typ_cd, t1.fs_origin_cd, t1.fdoc_nbr, t1.trn_encum_desc, t5.awrd_icr_rate_pct";
+ 	LOG.info(sql);
+-	final String docNumber = new SimpleDateFormat("yyyyMMdd").format(new Date());
++	//final String docNumber = new SimpleDateFormat("yyyyMMdd").format(new Date());
+ 	getJdbcTemplate().query(sql, new ResultSetExtractor() {
+ 	    @Override
+ 	    public Object extractData(ResultSet rs) throws SQLException, DataAccessException {
+@@ -93,7 +93,7 @@
+ 				+ StringUtils.rightPad("", 2) //Fiscal Period   30-31
+ 				+ DOC_TYP_ICRN //Document Type   32-35
+ 				+ FS_ORIGIN_CODE_MF //Origin Code     36-37
+-				+ StringUtils.rightPad(docNumber, 14) //Doc Number  38-51
++				+ StringUtils.rightPad(rs.getString("fdoc_nbr"), 14) //Doc Number  38-51
+ 				+ StringUtils.rightPad("", 5) //Entry Seq Nbr   52-56
+ 				+ StringUtils.rightPad(StringUtils.substring(desc, 0,40), 40) //Description     57-96
+ 				+ StringUtils.leftPad(new_encumb_amt.abs().toString(), 21) //Amount 97-116

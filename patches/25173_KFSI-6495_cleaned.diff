@@ -1,0 +1,30 @@
+Index: work/src/edu/arizona/kfs/gl/dataaccess/impl/IcrEncumbranceDaoJdbc.java
+===================================================================
+--- work/src/edu/arizona/kfs/gl/dataaccess/impl/IcrEncumbranceDaoJdbc.java	(revision 25172)
++++ work/src/edu/arizona/kfs/gl/dataaccess/impl/IcrEncumbranceDaoJdbc.java	(revision 25173)
+@@ -69,14 +69,14 @@
+ 			if (icrRate == 0) {
+ 			    encumb_amt = KualiDecimal.ZERO;
+ 			} else {
+-			    encumb_amt = new KualiDecimal(rs.getDouble("encumb_amt")).multiply(new KualiDecimal((icrRate / 100)));
++			    encumb_amt = new KualiDecimal(rs.getDouble("encumb_amt") * icrRate * 0.01d);
+ 			}
+ 			KualiDecimal new_encumb_amt = encumb_amt.subtract(current_amt);
+ 			if (new_encumb_amt.isZero()) {
+ 			    // ignore zero dollar amounts
+ 			    continue;
+ 			}
+-			String desc = "ICR Encumbrance " + DOC_TYP_ICRN + " " + rs.getString("fdoc_nbr") + " " + icrRate;
++			String desc = "ICR Encumbrance " + rs.getString("fdoc_typ_cd") + " " + rs.getString("fdoc_nbr") + " " + icrRate;
+ 			String debitCreditInd = "D";
+ 			if (new_encumb_amt.isNegative()) {
+ 			    debitCreditInd = "C";
+@@ -96,7 +96,7 @@
+ 				+ StringUtils.rightPad(docNumber, 14) //Doc Number  38-51
+ 				+ StringUtils.rightPad("", 5) //Entry Seq Nbr   52-56
+ 				+ StringUtils.rightPad(StringUtils.substring(desc, 0,40), 40) //Description     57-96
+-				+ StringUtils.leftPad(new_encumb_amt.abs().toString(), 20) //Amount 97-116
++				+ StringUtils.leftPad(new_encumb_amt.abs().toString(), 21) //Amount 97-116
+ 				+ debitCreditInd //Debit/Credit    117-117
+ 				+ new SimpleDateFormat("yyyy-MM-dd").format(new Date()) //Trans Date      118-127
+ 		                + "          "                        // Org Doc Nbr       128-137

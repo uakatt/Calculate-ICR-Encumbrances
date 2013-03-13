@@ -1,0 +1,26 @@
+Index: financial-system/kfs/trunk/work/src/edu/arizona/kfs/gl/batch/service/impl/IcrEncumbranceServiceImpl.java
+===================================================================
+--- financial-system/kfs/trunk/work/src/edu/arizona/kfs/gl/batch/service/impl/IcrEncumbranceServiceImpl.java	(revision 25057)
++++ financial-system/kfs/trunk/work/src/edu/arizona/kfs/gl/batch/service/impl/IcrEncumbranceServiceImpl.java	(revision 25058)
+@@ -78,7 +78,7 @@
+ 	try {
+ 	    // make directory structure if doesn't exist
+ 	    new File(getDirectoryName()).mkdirs();
+-	    fileLoc = new File(getDirectoryName(), "icr_encumbrance_feed_" + new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss").format(new Date()) + ".txt");
++	    fileLoc = new File(getDirectoryName(), "icr_encumbrance_feed_" + new SimpleDateFormat("yyyy_MM_dd").format(new Date()) + ".txt");
+ 	    LOG.info("ICR Encumbrance feed location is " + fileLoc.getPath());
+ 	    BufferedWriter fw = new BufferedWriter(new FileWriter(fileLoc));
+ 	    try {
+Index: financial-system/kfs/trunk/work/src/edu/arizona/kfs/gl/dataaccess/impl/IcrEncumbranceDaoJdbc.java
+===================================================================
+--- financial-system/kfs/trunk/work/src/edu/arizona/kfs/gl/dataaccess/impl/IcrEncumbranceDaoJdbc.java	(revision 25057)
++++ financial-system/kfs/trunk/work/src/edu/arizona/kfs/gl/dataaccess/impl/IcrEncumbranceDaoJdbc.java	(revision 25058)
+@@ -87,7 +87,7 @@
+ 				+ "IC" //Origin Code     36-37
+ 				+ StringUtils.rightPad(rs.getString("fdoc_nbr"), 14) //Doc Number  38-51
+ 				+ StringUtils.rightPad("", 5) //Entry Seq Nbr   52-56
+-				+ StringUtils.rightPad(rs.getString("trn_encum_desc"), 40) //Description     57-96
++				+ StringUtils.rightPad("ICR Encumbrance", 40) //Description     57-96
+ 				+ StringUtils.leftPad(new_encumb_amt.abs().toString(), 20) //Amount 97-116
+ 				+ debitCreditInd //Debit/Credit    117-117
+ 				+ new SimpleDateFormat("yyyy-MM-dd").format(new Date()) //Trans Date      118-127

@@ -1,0 +1,87 @@
+Index: financial-system/kfs/trunk/work/src/edu/arizona/kfs/gl/dataaccess/impl/IcrEncumbranceDaoJdbc.java
+===================================================================
+--- financial-system/kfs/trunk/work/src/edu/arizona/kfs/gl/dataaccess/impl/IcrEncumbranceDaoJdbc.java	(revision 25077)
++++ financial-system/kfs/trunk/work/src/edu/arizona/kfs/gl/dataaccess/impl/IcrEncumbranceDaoJdbc.java	(revision 25078)
+@@ -32,6 +32,11 @@
+ import edu.arizona.kfs.gl.dataaccess.IcrEncumbranceDao;
+ 
+ public class IcrEncumbranceDaoJdbc extends PlatformAwareDaoBaseJdbc implements IcrEncumbranceDao {
++    private static final String ENCUMBRANCE_BAL_TYP_IC = "IC";
++    private static final String DOC_TYP_ICRN = "ICRN";
++    private static final String INCLUDED_FIN_BAL_TYP_CODES = "'IE','EX'";
++    private static final String INCLUDED_FIN_OBJ_TYP_CODES = "'EX', 'EE', 'ES'";
++    private static final String FS_ORIGIN_CODE_MF = "MF";
+     private static Logger LOG = Logger.getLogger(IcrEncumbranceDaoJdbc.class);
+ 
+     @Override
+@@ -41,36 +46,39 @@
+ 		+ "sum(nvl(t2.acln_encum_amt - t2.acln_encum_cls_amt, 0)) current_amt from gl_encumbrance_t t1 left join gl_encumbrance_t t2 "
+ 		+ "on t1.univ_fiscal_yr = t2.univ_fiscal_yr and t1.account_nbr = t2.account_nbr and t1.sub_acct_nbr = t2.sub_acct_nbr and "
+ 		+ "t1.fin_object_cd = t2.fin_object_cd and t1.fin_sub_obj_cd = t2.fin_sub_obj_cd and t1.fin_balance_typ_cd = t2.fin_balance_typ_cd "
+-		+ "and t1.fdoc_typ_cd = t2.fdoc_typ_cd and t1.fdoc_nbr = t2.fdoc_nbr and t2.fs_origin_cd = 'IC' join ca_account_t t3 on "
++		+ "and t1.fdoc_typ_cd = t2.fdoc_typ_cd and t1.fdoc_nbr = t2.fdoc_nbr and t2.fs_origin_cd = '" + FS_ORIGIN_CODE_MF + "' join ca_account_t t3 on "
+ 		+ "t1.fin_coa_cd = t3.fin_coa_cd and t1.account_nbr = t3.account_nbr join ca_object_code_t t4 on t4.univ_fiscal_yr = t1.univ_fiscal_yr "
+ 		+ "and t4.fin_coa_cd = t1.fin_coa_cd and t4.fin_object_cd = t1.fin_object_cd "
+-		+ " join ca_icr_auto_entr_t t5 on t5.fin_series_id = t3.fin_series_id and t5.univ_fiscal_yr = t1.univ_fiscal_yr "
+-		+ "where t1.fin_balance_typ_cd in ('IE','EX') and t1.fs_origin_cd <> 'IC' and t4.fin_obj_typ_cd IN ('EX', 'EE', 'ES') "
+-		+ "and not exists (select 1 from ca_icr_excl_type_t where acct_icr_typ_cd = t3.acct_icr_typ_cd "
++		+ " join ca_icr_auto_entr_t t5 on t5.fin_series_id = t3.fin_series_id and t5.univ_fiscal_yr = t1.univ_fiscal_yr " + "where t1.fin_balance_typ_cd in (" + INCLUDED_FIN_BAL_TYP_CODES
++		+ ") and t1.fs_origin_cd <> '" + FS_ORIGIN_CODE_MF + "' and t4.fin_obj_typ_cd IN (" + INCLUDED_FIN_OBJ_TYP_CODES + ") "
++		+ "and t5.trn_debit_crdt_cd = 'D' and not exists (select 1 from ca_icr_excl_type_t where acct_icr_typ_cd = t3.acct_icr_typ_cd "
+ 		+ "and acct_icr_excl_typ_actv_ind = 'Y' and fin_object_cd = t1.fin_object_cd) and t1.univ_fiscal_yr >= " + fiscalYear
+ 		+ " group by t1.univ_fiscal_yr, t1.fin_coa_cd, t1.account_nbr, t1.sub_acct_nbr, t5.fin_object_cd, t1.fin_balance_typ_cd, "
+ 		+ "t1.fdoc_typ_cd, t1.fs_origin_cd, t1.fdoc_nbr, t1.trn_encum_desc, t5.awrd_icr_rate_pct";
+ 	LOG.info(sql);
++	final String docNumber = new SimpleDateFormat("yyyyMMdd").format(new Date());
+ 	getJdbcTemplate().query(sql, new ResultSetExtractor() {
+ 	    @Override
+ 	    public Object extractData(ResultSet rs) throws SQLException, DataAccessException {
+ 		try {
+ 		    String newLine = System.getProperty("line.separator");
+ 		    while (rs.next()) {
++			KualiDecimal current_amt = new KualiDecimal(rs.getDouble("current_amt"));
++			KualiDecimal encumb_amt = null;
+ 			double icrRate = rs.getDouble("icr_rate");
+ 			if (icrRate == 0) {
+-			    // ignore it
+-			    continue;
++			    encumb_amt = KualiDecimal.ZERO;
++			} else {
++			    encumb_amt = new KualiDecimal(rs.getDouble("encumb_amt")).multiply(new KualiDecimal((icrRate / 100)));
+ 			}
+-			KualiDecimal encumb_amt = new KualiDecimal(rs.getDouble("encumb_amt")).multiply(new KualiDecimal((icrRate/100)));
+-			KualiDecimal current_amt = new KualiDecimal(rs.getDouble("current_amt"));
+ 			KualiDecimal new_encumb_amt = encumb_amt.subtract(current_amt);
+-			if(new_encumb_amt.isZero()){
+-			    //ignore zero dollar amounts
++			if (new_encumb_amt.isZero()) {
++			    // ignore zero dollar amounts
+ 			    continue;
+ 			}
++			String desc = "ICR Encumbrance " + DOC_TYP_ICRN + " " + rs.getString("fdoc_nbr") + " " + icrRate;
+ 			String debitCreditInd = "D";
+-			if(new_encumb_amt.isNegative()){
++			if (new_encumb_amt.isNegative()) {
+ 			    debitCreditInd = "C";
+ 			}
+ 			fw.write(""
+@@ -80,14 +88,14 @@
+ 				+ StringUtils.rightPad(rs.getString("sub_acct_nbr"), 5)//Sub Account 14-18
+ 				+ rs.getString("fin_object_cd") //Object Code     19-22
+ 				+ "---" //Sub Object      23-25
+-				+ rs.getString("fin_balance_typ_cd") // Balance Type    26-27
++				+ ENCUMBRANCE_BAL_TYP_IC
+ 				+ StringUtils.rightPad("", 2) //Object Type     28-29
+ 				+ StringUtils.rightPad("", 2) //Fiscal Period   30-31
+-				+ StringUtils.rightPad(rs.getString("fdoc_typ_cd"), 4) //Document Type   32-35
+-				+ "IC" //Origin Code     36-37
+-				+ StringUtils.rightPad(rs.getString("fdoc_nbr"), 14) //Doc Number  38-51
++				+ DOC_TYP_ICRN //Document Type   32-35
++				+ FS_ORIGIN_CODE_MF //Origin Code     36-37
++				+ StringUtils.rightPad(docNumber, 14) //Doc Number  38-51
+ 				+ StringUtils.rightPad("", 5) //Entry Seq Nbr   52-56
+-				+ StringUtils.rightPad("ICR Encumbrance", 40) //Description     57-96
++				+ StringUtils.rightPad(StringUtils.substring(desc, 0,40), 40) //Description     57-96
+ 				+ StringUtils.leftPad(new_encumb_amt.abs().toString(), 20) //Amount 97-116
+ 				+ debitCreditInd //Debit/Credit    117-117
+ 				+ new SimpleDateFormat("yyyy-MM-dd").format(new Date()) //Trans Date      118-127

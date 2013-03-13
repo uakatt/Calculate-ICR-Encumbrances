@@ -1,0 +1,310 @@
+Index: work/src/edu/arizona/kfs/gl/batch/service/impl/IcrEncumbranceServiceImpl.java
+===================================================================
+--- work/src/edu/arizona/kfs/gl/batch/service/impl/IcrEncumbranceServiceImpl.java	(revision 26107)
++++ work/src/edu/arizona/kfs/gl/batch/service/impl/IcrEncumbranceServiceImpl.java	(revision 26108)
+@@ -22,6 +22,7 @@
+ import java.util.Date;
+ 
+ import org.apache.log4j.Logger;
++import org.kuali.kfs.gl.GeneralLedgerConstants;
+ import org.kuali.kfs.sys.context.SpringContext;
+ import org.kuali.kfs.sys.service.UniversityDateService;
+ 
+@@ -30,75 +31,67 @@
+ 
+ public class IcrEncumbranceServiceImpl implements IcrEncumbranceService {
+     private static Logger LOG = Logger.getLogger(IcrEncumbranceServiceImpl.class);
+-    private String directoryName;
++
+     private IcrEncumbranceDao icrEncumbranceDao;
+ 
+-    /**
+-     * Gets the icrEncumbranceDao attribute.
+-     * 
+-     * @return Returns the icrEncumbranceDao.
+-     */
+-    public IcrEncumbranceDao getIcrEncumbranceDao() {
+-        return icrEncumbranceDao;
+-    }
++    private String glOriginEntryDirectoryName;
+ 
+-    /**
+-     * Sets the icrEncumbranceDao attribute value.
+-     * 
+-     * @param icrEncumbranceDao
+-     *            The icrEncumbranceDao to set.
+-     */
+-    public void setIcrEncumbranceDao(IcrEncumbranceDao icrEncumbranceDao) {
+-        this.icrEncumbranceDao = icrEncumbranceDao;
+-    }
+-
+-    /**
+-     * Gets the directoryName attribute.
+-     * 
+-     * @return Returns the directoryName.
+-     */
+-    public String getDirectoryName() {
+-        return directoryName;
+-    }
+-
+-    /**
+-     * Sets the directoryName attribute value.
+-     * 
+-     * @param directoryName
+-     *            The directoryName to set.
+-     */
+-    public void setDirectoryName(String directoryName) {
+-        this.directoryName = directoryName;
+-    }
+-
+     @Override
+     public File buildIcrEncumbranceFeed() {
+-        File fileLoc = null;
++        File encumbranceFeedFile = null;
+         Integer currentFiscalYear = SpringContext.getBean(UniversityDateService.class).getCurrentFiscalYear();
+         try {
+-            // make directory structure if doesn't exist
+-            new File(getDirectoryName()).mkdirs();
+-            fileLoc = new File(getDirectoryName(), "icr_encumbrance_feed_" + new SimpleDateFormat("yyyy_MM_dd").format(new Date()) + ".txt");
+-            LOG.info("ICR Encumbrance feed location is " + fileLoc.getPath());
+-            BufferedWriter fw = new BufferedWriter(new FileWriter(fileLoc));
++            String enumbranceFeedFileName = "icr_encumbrance_feed_" + new SimpleDateFormat("yyyy_MM_dd").format(new Date()) + GeneralLedgerConstants.BatchFileSystem.EXTENSION; 
++            encumbranceFeedFile = new File(glOriginEntryDirectoryName + File.separator + enumbranceFeedFileName);
++            
++            BufferedWriter fw = new BufferedWriter(new FileWriter(encumbranceFeedFile));
+             try {
+                 icrEncumbranceDao.buildIcrEncumbranceFeed(currentFiscalYear, fw);
+-            } finally {
++                
++                // create done file
++                String enumbranceDoneFeedFileName = "icr_encumbrance_feed_" + new SimpleDateFormat("yyyy_MM_dd").format(new Date()) + GeneralLedgerConstants.BatchFileSystem.DONE_FILE_EXTENSION; 
++                File encumbranceDoneFeedFile = new File(glOriginEntryDirectoryName + File.separator + enumbranceDoneFeedFileName);
++                if (!encumbranceDoneFeedFile.exists()) {
++                encumbranceDoneFeedFile.createNewFile();
++                }
++            }
++            finally {
+                 if (fw != null) {
+                     fw.flush();
+                     fw.close();
+                 }
+             }
+-        } catch (Exception ex) {
++        }
++        catch (Exception ex) {
+             try {
+-                if (fileLoc != null) {
+-                    fileLoc.delete();
++                if (encumbranceFeedFile != null) {
++                    encumbranceFeedFile.delete();
+                 }
+-            } catch (Exception ee) {
+-                LOG.error("Failed to delete even though process failed" + fileLoc);
+             }
++            catch (Exception ee) {
++                LOG.error("Failed to delete even though process failed" + encumbranceFeedFile);
++            }
+             throw new RuntimeException("Error, see the stack trace.", ex);
+         }
+-        return fileLoc;
++        
++        return encumbranceFeedFile;
+     }
++
++    protected IcrEncumbranceDao getIcrEncumbranceDao() {
++        return icrEncumbranceDao;
++    }
++
++    public void setIcrEncumbranceDao(IcrEncumbranceDao icrEncumbranceDao) {
++        this.icrEncumbranceDao = icrEncumbranceDao;
++    }
++
++    protected String getGlOriginEntryDirectoryName() {
++        return glOriginEntryDirectoryName;
++    }
++
++    public void setGlOriginEntryDirectoryName(String glOriginEntryDirectoryName) {
++        this.glOriginEntryDirectoryName = glOriginEntryDirectoryName;
++    }
++
++
+ }
+Index: work/src/edu/arizona/kfs/gl/spring-gl.xml
+===================================================================
+--- work/src/edu/arizona/kfs/gl/spring-gl.xml	(revision 26107)
++++ work/src/edu/arizona/kfs/gl/spring-gl.xml	(revision 26108)
+@@ -387,8 +387,8 @@
+ 	<bean id="icrEncumbranceDao" class="edu.arizona.kfs.gl.dataaccess.impl.IcrEncumbranceDaoJdbc" parent="platformAwareDaoJdbc" />
+ 	
+ 	<bean id="icrEncumbranceService" class="edu.arizona.kfs.gl.batch.service.impl.IcrEncumbranceServiceImpl">
+-		<property name="directoryName" value="${staging.directory}/gl/enterpriseFeed" />
+ 		<property name="icrEncumbranceDao" ref="icrEncumbranceDao"></property>
++		<property name="glOriginEntryDirectoryName" value="${staging.directory}/gl/originEntry"/>
+ 	</bean>
+ 	
+ 	<bean id="icrEncumbranceFeedStep" class="edu.arizona.kfs.gl.batch.IcrEncumbranceFeedStep" parent="step">
+Index: work/src/edu/arizona/kfs/gl/dataaccess/impl/IcrEncumbranceDaoJdbc.java
+===================================================================
+--- work/src/edu/arizona/kfs/gl/dataaccess/impl/IcrEncumbranceDaoJdbc.java	(revision 26107)
++++ work/src/edu/arizona/kfs/gl/dataaccess/impl/IcrEncumbranceDaoJdbc.java	(revision 26108)
+@@ -41,83 +41,83 @@
+ 
+     @Override
+     public void buildIcrEncumbranceFeed(Integer fiscalYear, final Writer fw) throws IOException {
+-        String sql = "select t1.univ_fiscal_yr, t1.fin_coa_cd, t1.account_nbr, t1.sub_acct_nbr, t5.fin_object_cd, t1.fin_balance_typ_cd, "
+-            + "t1.fdoc_typ_cd, t1.fs_origin_cd, t1.fdoc_nbr, t1.trn_encum_desc, nvl(t5.awrd_icr_rate_pct,0) icr_rate, sum(nvl(t1.acln_encum_amt - t1.acln_encum_cls_amt, 0)) encumb_amt, "
+-            + "sum(nvl(t2.acln_encum_amt - t2.acln_encum_cls_amt, 0)) current_amt from gl_encumbrance_t t1 left join gl_encumbrance_t t2 "
+-            + "on t1.univ_fiscal_yr = t2.univ_fiscal_yr and t1.account_nbr = t2.account_nbr and t1.sub_acct_nbr = t2.sub_acct_nbr and "
+-            + "t1.fin_object_cd = t2.fin_object_cd and t1.fin_sub_obj_cd = t2.fin_sub_obj_cd and t1.fin_balance_typ_cd = t2.fin_balance_typ_cd "
+-            + "and t1.fdoc_typ_cd = t2.fdoc_typ_cd and t1.fdoc_nbr = t2.fdoc_nbr and t2.fs_origin_cd = '" + FS_ORIGIN_CODE_MF + "' join ca_account_t t3 on "
+-            + "t1.fin_coa_cd = t3.fin_coa_cd and t1.account_nbr = t3.account_nbr join ca_object_code_t t4 on t4.univ_fiscal_yr = t1.univ_fiscal_yr "
+-            + "and t4.fin_coa_cd = t1.fin_coa_cd and t4.fin_object_cd = t1.fin_object_cd "
+-            + " join ca_icr_auto_entr_t t5 on t5.fin_series_id = t3.fin_series_id and t5.univ_fiscal_yr = t1.univ_fiscal_yr " + "where t1.fin_balance_typ_cd in (" + INCLUDED_FIN_BAL_TYP_CODES
+-            + ") and t1.fs_origin_cd <> '" + FS_ORIGIN_CODE_MF + "' and t4.fin_obj_typ_cd IN (" + INCLUDED_FIN_OBJ_TYP_CODES + ") "
+-            + "and t5.trn_debit_crdt_cd = 'D' and not exists (select 1 from ca_icr_excl_type_t where acct_icr_typ_cd = t3.acct_icr_typ_cd "
+-            + "and acct_icr_excl_typ_actv_ind = 'Y' and fin_object_cd = t1.fin_object_cd) and t1.univ_fiscal_yr >= " + fiscalYear
+-            + " group by t1.univ_fiscal_yr, t1.fin_coa_cd, t1.account_nbr, t1.sub_acct_nbr, t5.fin_object_cd, t1.fin_balance_typ_cd, "
+-            + "t1.fdoc_typ_cd, t1.fs_origin_cd, t1.fdoc_nbr, t1.trn_encum_desc, t5.awrd_icr_rate_pct";
+-        LOG.info(sql);
+-        
+-        //final String docNumber = new SimpleDateFormat("yyyyMMdd").format(new Date());
+-        getJdbcTemplate().query(sql, new ResultSetExtractor() {
+-            @Override
+-            public Object extractData(ResultSet rs) throws SQLException, DataAccessException {
+-                try {
+-                    String newLine = System.getProperty("line.separator");
+-                    while (rs.next()) {
+-                        KualiDecimal current_amt = new KualiDecimal(rs.getDouble("current_amt"));
+-                        KualiDecimal encumb_amt = null;
+-                        double icrRate = rs.getDouble("icr_rate");
+-                        if (icrRate == 0) {
+-                            encumb_amt = KualiDecimal.ZERO;
+-                        } else {
+-                            encumb_amt = new KualiDecimal(rs.getDouble("encumb_amt") * icrRate * 0.01d);
+-                        }
+-                        KualiDecimal new_encumb_amt = encumb_amt.subtract(current_amt);
+-                        if (new_encumb_amt.isZero()) {
+-                            // ignore zero dollar amounts
+-                            continue;
+-                        }
+-                        String desc = "ICR Encumbrance " + rs.getString("fdoc_typ_cd") + " " + rs.getString("fdoc_nbr") + " " + icrRate;
+-                        String debitCreditInd = "D";
+-                        if (new_encumb_amt.isNegative()) {
+-                            debitCreditInd = "C";
+-                        }
+-                        fw.write(""
+-                                + rs.getString("univ_fiscal_yr")// Fiscal year 1-4
+-                                + rs.getString("fin_coa_cd") // Chart code 5-6
+-                                + rs.getString("account_nbr") // Account Number 7-13
+-                                + StringUtils.rightPad(rs.getString("sub_acct_nbr"), 5)//Sub Account 14-18
+-                                + rs.getString("fin_object_cd") //Object Code     19-22
+-                                + "---" //Sub Object      23-25
+-                                + rs.getString("fin_balance_typ_cd") //balance type code
+-                                + StringUtils.rightPad("", 2) //Object Type     28-29
+-                                + StringUtils.rightPad("", 2) //Fiscal Period   30-31
+-                                + StringUtils.rightPad(rs.getString("fdoc_typ_cd"), 4) //Document Type   32-35
+-                                + FS_ORIGIN_CODE_MF //Origin Code     36-37
+-                                + StringUtils.rightPad(rs.getString("fdoc_nbr"), 14) //Doc Number  38-51
+-                                + StringUtils.rightPad("", 5) //Entry Seq Nbr   52-56
+-                                + StringUtils.rightPad(StringUtils.substring(desc, 0,40), 40) //Description     57-96
+-                                + StringUtils.leftPad(new_encumb_amt.abs().toString(), 21) //Amount 97-116
+-                                + debitCreditInd //Debit/Credit    117-117
+-                                + new SimpleDateFormat("yyyy-MM-dd").format(new Date()) //Trans Date      118-127
+-                                + "          "                        // Org Doc Nbr       128-137
+-                                + "          "                        // Project Code      138-147
+-                                + "        "                          // orig ref id       148-155
+-                                + "    "                              // ref doc type      156-159
+-                                + "  "                                // ref origin code   160-161
+-                                + "              "                    // ref doc number    162-175
+-                                + "          "                        // reversal date     176-185
+-                                + "D"                       // Enc update code   186-186
+-                        ); 
++	String sql = "select t1.univ_fiscal_yr, t1.fin_coa_cd, t1.account_nbr, t1.sub_acct_nbr, t5.fin_object_cd, t1.fin_balance_typ_cd, "
++		+ "t1.fdoc_typ_cd, t1.fs_origin_cd, t1.fdoc_nbr, t1.trn_encum_desc," + getDbPlatform().getIsNullFunction("t5.awrd_icr_rate_pct", "0") + " icr_rate,"
++		+ "sum(" + getDbPlatform().getIsNullFunction("t1.acln_encum_amt - t1.acln_encum_cls_amt", "0") + ") encumb_amt, "
++		+ "sum(" + getDbPlatform().getIsNullFunction("t2.acln_encum_amt - t2.acln_encum_cls_amt", "0") + ") current_amt from gl_encumbrance_t t1 left join gl_encumbrance_t t2 "
++		+ "on t1.univ_fiscal_yr = t2.univ_fiscal_yr and t1.account_nbr = t2.account_nbr and t1.sub_acct_nbr = t2.sub_acct_nbr and "
++		+ "t1.fin_object_cd = t2.fin_object_cd and t1.fin_sub_obj_cd = t2.fin_sub_obj_cd and t1.fin_balance_typ_cd = t2.fin_balance_typ_cd "
++		+ "and t1.fdoc_typ_cd = t2.fdoc_typ_cd and t1.fdoc_nbr = t2.fdoc_nbr and t2.fs_origin_cd = '" + FS_ORIGIN_CODE_MF + "' join ca_account_t t3 on "
++		+ "t1.fin_coa_cd = t3.fin_coa_cd and t1.account_nbr = t3.account_nbr join ca_object_code_t t4 on t4.univ_fiscal_yr = t1.univ_fiscal_yr "
++		+ "and t4.fin_coa_cd = t1.fin_coa_cd and t4.fin_object_cd = t1.fin_object_cd "
++		+ " join ca_icr_auto_entr_t t5 on t5.fin_series_id = t3.fin_series_id and t5.univ_fiscal_yr = t1.univ_fiscal_yr " + "where t1.fin_balance_typ_cd in (" + INCLUDED_FIN_BAL_TYP_CODES
++		+ ") and t1.fs_origin_cd <> '" + FS_ORIGIN_CODE_MF + "' and t4.fin_obj_typ_cd IN (" + INCLUDED_FIN_OBJ_TYP_CODES + ") "
++		+ "and t5.trn_debit_crdt_cd = 'D' and not exists (select 1 from ca_icr_excl_type_t where acct_icr_typ_cd = t3.acct_icr_typ_cd "
++		+ "and acct_icr_excl_typ_actv_ind = 'Y' and fin_object_cd = t1.fin_object_cd) and t1.univ_fiscal_yr >= " + fiscalYear
++		+ " group by t1.univ_fiscal_yr, t1.fin_coa_cd, t1.account_nbr, t1.sub_acct_nbr, t5.fin_object_cd, t1.fin_balance_typ_cd, "
++		+ "t1.fdoc_typ_cd, t1.fs_origin_cd, t1.fdoc_nbr, t1.trn_encum_desc, t5.awrd_icr_rate_pct";
++	LOG.info(sql);
+ 
+-                        fw.write(newLine);
+-                        fw.flush();
+-                    }
+-                } catch (Exception e) {
+-                    throw new RuntimeException("e", e);
+-                }
+-                return null;
+-            }
+-        });
++	getJdbcTemplate().query(sql, new ResultSetExtractor() {
++	    @Override
++	    public Object extractData(ResultSet rs) throws SQLException, DataAccessException {
++		try {
++		    String newLine = System.getProperty("line.separator");
++		    while (rs.next()) {
++			KualiDecimal current_amt = new KualiDecimal(rs.getDouble("current_amt"));
++			KualiDecimal encumb_amt = null;
++			double icrRate = rs.getDouble("icr_rate");
++			if (icrRate == 0) {
++			    encumb_amt = KualiDecimal.ZERO;
++			} else {
++			    encumb_amt = new KualiDecimal(rs.getDouble("encumb_amt") * icrRate * 0.01d);
++			}
++			KualiDecimal new_encumb_amt = encumb_amt.subtract(current_amt);
++			if (new_encumb_amt.isZero()) {
++			    // ignore zero dollar amounts
++			    continue;
++			}
++			String desc = "ICR Encumbrance " + rs.getString("fdoc_typ_cd") + " " + rs.getString("fdoc_nbr") + " " + icrRate;
++			String debitCreditInd = "D";
++			if (new_encumb_amt.isNegative()) {
++			    debitCreditInd = "C";
++			}
++			fw.write(""
++				+ rs.getString("univ_fiscal_yr")// Fiscal year 1-4
++				+ rs.getString("fin_coa_cd") // Chart code 5-6
++				+ rs.getString("account_nbr") // Account Number 7-13
++				+ StringUtils.rightPad(rs.getString("sub_acct_nbr"), 5)//Sub Account 14-18
++				+ rs.getString("fin_object_cd") //Object Code     19-22
++				+ "---" //Sub Object      23-25
++				+ rs.getString("fin_balance_typ_cd") //balance type code
++				+ StringUtils.rightPad("", 2) //Object Type     28-29
++				+ StringUtils.rightPad("", 2) //Fiscal Period   30-31
++				+ StringUtils.rightPad(rs.getString("fdoc_typ_cd"), 4) //Document Type   32-35
++				+ FS_ORIGIN_CODE_MF //Origin Code     36-37
++				+ StringUtils.rightPad(rs.getString("fdoc_nbr"), 14) //Doc Number  38-51
++				+ StringUtils.rightPad("", 5) //Entry Seq Nbr   52-56
++				+ StringUtils.rightPad(StringUtils.substring(desc, 0,40), 40) //Description     57-96
++				+ StringUtils.leftPad(new_encumb_amt.abs().toString(), 21) //Amount 97-116
++				+ debitCreditInd //Debit/Credit    117-117
++				+ new SimpleDateFormat("yyyy-MM-dd").format(new Date()) //Trans Date      118-127
++		                + "          "                        // Org Doc Nbr       128-137
++		                + "          "                        // Project Code      138-147
++		                + "        "                          // orig ref id       148-155
++		                + "    "                              // ref doc type      156-159
++		                + "  "                                // ref origin code   160-161
++		                + "              "                    // ref doc number    162-175
++		                + "          "                        // reversal date     176-185
++		                + "D"                       // Enc update code   186-186
++			); 
++			
++			fw.write(newLine);
++			fw.flush();
++		    }
++		} catch (Exception e) {
++		    throw new RuntimeException("e", e);
++		}
++		return null;
++	    }
++	});
+     }
+ }

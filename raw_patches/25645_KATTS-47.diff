@@ -1,0 +1,13 @@
+Index: financial-system/kfs/trunk/work/src/edu/arizona/kfs/gl/dataaccess/impl/IcrEncumbranceDaoJdbc.java
+===================================================================
+--- financial-system/kfs/trunk/work/src/edu/arizona/kfs/gl/dataaccess/impl/IcrEncumbranceDaoJdbc.java	(revision 25644)
++++ financial-system/kfs/trunk/work/src/edu/arizona/kfs/gl/dataaccess/impl/IcrEncumbranceDaoJdbc.java	(revision 25645)
+@@ -91,7 +91,7 @@
+ 				+ rs.getString("fin_balance_typ_cd") //balance type code
+ 				+ StringUtils.rightPad("", 2) //Object Type     28-29
+ 				+ StringUtils.rightPad("", 2) //Fiscal Period   30-31
+-				+ DOC_TYP_ICRN //Document Type   32-35
++				+ StringUtils.rightPad(rs.getString("fdoc_typ_cd"), 4) //Document Type   32-35
+ 				+ FS_ORIGIN_CODE_MF //Origin Code     36-37
+ 				+ StringUtils.rightPad(rs.getString("fdoc_nbr"), 14) //Doc Number  38-51
+ 				+ StringUtils.rightPad("", 5) //Entry Seq Nbr   52-56

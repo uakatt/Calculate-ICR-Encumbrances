@@ -1,0 +1,140 @@
+------------------------------------------------------------------------
+r25003 | ummerh@CATNET.ARIZONA.EDU | 2012-03-28 02:09:22 -0700 (Wed, 28 Mar 2012) | 1 line
+Changed paths:
+   A /financial-system/kfs/trunk/work/src/edu/arizona/kfs/gl/batch/IcrEncumbranceFeedStep.java
+   A /financial-system/kfs/trunk/work/src/edu/arizona/kfs/gl/batch/service/IcrEncumbranceService.java
+   A /financial-system/kfs/trunk/work/src/edu/arizona/kfs/gl/batch/service/impl/IcrEncumbranceServiceImpl.java
+   A /financial-system/kfs/trunk/work/src/edu/arizona/kfs/gl/dataaccess/IcrEncumbranceDao.java
+   A /financial-system/kfs/trunk/work/src/edu/arizona/kfs/gl/dataaccess/impl/IcrEncumbranceDaoJdbc.java
+   M /financial-system/kfs/trunk/work/src/edu/arizona/kfs/gl/spring-gl.xml
+
+KFSI-6495 Calculate ICR Encumbrances in KFS- MOD
+------------------------------------------------------------------------
+------------------------------------------------------------------------
+r25057 | ummerh@CATNET.ARIZONA.EDU | 2012-03-29 18:01:15 -0700 (Thu, 29 Mar 2012) | 1 line
+Changed paths:
+   M /financial-system/kfs/trunk/work/src/edu/arizona/kfs/gl/batch/IcrEncumbranceFeedStep.java
+   M /financial-system/kfs/trunk/work/src/edu/arizona/kfs/gl/batch/service/impl/IcrEncumbranceServiceImpl.java
+   M /financial-system/kfs/trunk/work/src/edu/arizona/kfs/gl/dataaccess/impl/IcrEncumbranceDaoJdbc.java
+   M /financial-system/kfs/trunk/work/src/edu/arizona/kfs/gl/spring-gl.xml
+   M /financial-system/kfs/trunk/work/src/org/kuali/kfs/gl/spring-gl.xml
+
+KFSI-6495 Calculate ICR Encumbrances in KFS- MOD
+------------------------------------------------------------------------
+------------------------------------------------------------------------
+r25058 | ummerh@CATNET.ARIZONA.EDU | 2012-03-29 18:36:22 -0700 (Thu, 29 Mar 2012) | 1 line
+Changed paths:
+   M /financial-system/kfs/trunk/work/src/edu/arizona/kfs/gl/batch/service/impl/IcrEncumbranceServiceImpl.java
+   M /financial-system/kfs/trunk/work/src/edu/arizona/kfs/gl/dataaccess/impl/IcrEncumbranceDaoJdbc.java
+
+KFSI-6495 Calculate ICR Encumbrances in KFS- MOD
+------------------------------------------------------------------------
+------------------------------------------------------------------------
+r25059 | ummerh@CATNET.ARIZONA.EDU | 2012-03-29 18:39:13 -0700 (Thu, 29 Mar 2012) | 1 line
+Changed paths:
+   M /financial-system/kfs/trunk/work/src/edu/arizona/kfs/gl/dataaccess/impl/IcrEncumbranceDaoJdbc.java
+
+KFSI-6495 Calculate ICR Encumbrances in KFS- MOD
+------------------------------------------------------------------------
+------------------------------------------------------------------------
+r25078 | ummerh@CATNET.ARIZONA.EDU | 2012-03-31 14:16:06 -0700 (Sat, 31 Mar 2012) | 1 line
+Changed paths:
+   M /financial-system/kfs/trunk/work/src/edu/arizona/kfs/gl/dataaccess/impl/IcrEncumbranceDaoJdbc.java
+
+KFSI-6495 Calculate ICR Encumbrances in KFS- MOD
+------------------------------------------------------------------------
+------------------------------------------------------------------------
+r25173 | ummerh@CATNET.ARIZONA.EDU | 2012-04-08 07:41:11 -0700 (Sun, 08 Apr 2012) | 1 line
+Changed paths:
+   M /financial-system/kfs/trunk/work/src/edu/arizona/kfs/gl/dataaccess/impl/IcrEncumbranceDaoJdbc.java
+
+KFSI-6495 Calculate ICR Encumbrances in KFS- MOD
+------------------------------------------------------------------------
+------------------------------------------------------------------------
+r25214 | ummerh@CATNET.ARIZONA.EDU | 2012-04-11 04:16:24 -0700 (Wed, 11 Apr 2012) | 1 line
+Changed paths:
+   M /financial-system/kfs/trunk/work/src/edu/arizona/kfs/gl/dataaccess/impl/IcrEncumbranceDaoJdbc.java
+
+KFSI-6495 Calculate ICR Encumbrances in KFS- MOD
+------------------------------------------------------------------------
+------------------------------------------------------------------------
+r25338 | ummerh@CATNET.ARIZONA.EDU | 2012-04-18 17:44:51 -0700 (Wed, 18 Apr 2012) | 1 line
+Changed paths:
+   M /financial-system/kfs/trunk/work/src/edu/arizona/kfs/gl/dataaccess/impl/IcrEncumbranceDaoJdbc.java
+
+KFSI-6495 Calculate ICR Encumbrances in KFS- MOD
+------------------------------------------------------------------------
+------------------------------------------------------------------------
+r25579 | ahollamo@CATNET.ARIZONA.EDU | 2012-05-03 21:25:35 -0700 (Thu, 03 May 2012) | 2 lines
+Changed paths:
+   M /financial-system/kfs/trunk/work/src/edu/arizona/kfs/gl/dataaccess/impl/IcrEncumbranceDaoJdbc.java
+
+KATTS-47
+Changed the "fdoc_nbr" column to include the original document number, rather than the date.
+------------------------------------------------------------------------
+------------------------------------------------------------------------
+r25644 | ahollamo@CATNET.ARIZONA.EDU | 2012-05-08 00:14:33 -0700 (Tue, 08 May 2012) | 2 lines
+Changed paths:
+   M /financial-system/kfs/trunk/work/src/edu/arizona/kfs/gl/batch/IcrEncumbranceFeedStep.java
+   M /financial-system/kfs/trunk/work/src/edu/arizona/kfs/gl/batch/service/impl/IcrEncumbranceServiceImpl.java
+
+KATTS-47
+Fixing indentation/whitespace ONLY.  No other changes on this commit.
+------------------------------------------------------------------------
+------------------------------------------------------------------------
+r25645 | ahollamo@CATNET.ARIZONA.EDU | 2012-05-08 00:15:43 -0700 (Tue, 08 May 2012) | 2 lines
+Changed paths:
+   M /financial-system/kfs/trunk/work/src/edu/arizona/kfs/gl/dataaccess/impl/IcrEncumbranceDaoJdbc.java
+
+KATTS-47
+Updated to generate ICR transactions that have the original doctype.
+------------------------------------------------------------------------
+------------------------------------------------------------------------
+r25646 | ahollamo@CATNET.ARIZONA.EDU | 2012-05-08 00:17:42 -0700 (Tue, 08 May 2012) | 2 lines
+Changed paths:
+   M /financial-system/kfs/trunk/work/src/edu/arizona/kfs/gl/dataaccess/impl/IcrEncumbranceDaoJdbc.java
+
+KATTS-47
+Fixing indentation/whitespace ONLY.  No other changes on this commit.
+------------------------------------------------------------------------
+------------------------------------------------------------------------
+r26108 | jkneal@CATNET.ARIZONA.EDU | 2012-06-03 16:10:00 -0700 (Sun, 03 Jun 2012) | 1 line
+Changed paths:
+   M /financial-system/kfs/trunk/work/src/edu/arizona/kfs/gl/batch/service/impl/IcrEncumbranceServiceImpl.java
+   M /financial-system/kfs/trunk/work/src/edu/arizona/kfs/gl/dataaccess/impl/IcrEncumbranceDaoJdbc.java
+   M /financial-system/kfs/trunk/work/src/edu/arizona/kfs/gl/spring-gl.xml
+
+KFSI-6495, KATTS-47 - Modified for MySqL, changed to write directly to origin entry with done file
+------------------------------------------------------------------------
+------------------------------------------------------------------------
+r26505 | jkneal@CATNET.ARIZONA.EDU | 2012-06-24 12:04:52 -0700 (Sun, 24 Jun 2012) | 1 line
+Changed paths:
+   M /financial-system/kfs/trunk/work/src/edu/arizona/kfs/gl/batch/service/impl/IcrEncumbranceServiceImpl.java
+   M /financial-system/kfs/trunk/work/src/edu/arizona/kfs/gl/dataaccess/impl/IcrEncumbranceDaoJdbc.java
+
+KFSI-6495, KATTS-47 - Modified to run two queries so the current encumbrance amount is correctly picked up
+------------------------------------------------------------------------
+------------------------------------------------------------------------
+r26933 | jkneal@CATNET.ARIZONA.EDU | 2012-07-21 12:15:36 -0700 (Sat, 21 Jul 2012) | 1 line
+Changed paths:
+   M /financial-system/kfs/trunk/work/src/edu/arizona/kfs/gl/GlConstants.java
+   M /financial-system/kfs/trunk/work/src/edu/arizona/kfs/gl/batch/service/impl/IcrEncumbranceServiceImpl.java
+   M /financial-system/kfs/trunk/work/src/edu/arizona/kfs/gl/dataaccess/IcrEncumbranceDao.java
+   M /financial-system/kfs/trunk/work/src/edu/arizona/kfs/gl/dataaccess/impl/IcrEncumbranceDaoJdbc.java
+
+KFSI-6495, KATTS-47 - Introduced system parameter for the ICR encumbrance origin code
+------------------------------------------------------------------------
+------------------------------------------------------------------------
+r27212 | jkneal@CATNET.ARIZONA.EDU | 2012-08-08 17:25:09 -0700 (Wed, 08 Aug 2012) | 1 line
+Changed paths:
+   M /financial-system/kfs/trunk/work/src/edu/arizona/kfs/gl/GlConstants.java
+
+KATTS-47 - changed component name
+------------------------------------------------------------------------
+------------------------------------------------------------------------
+r28633 | jkneal@CATNET.ARIZONA.EDU | 2012-10-27 15:03:57 -0700 (Sat, 27 Oct 2012) | 1 line
+Changed paths:
+   M /financial-system/kfs/trunk/work/src/edu/arizona/kfs/gl/dataaccess/impl/IcrEncumbranceDaoJdbc.java
+
+KATTS-1029 - rewritten to pull subaccount rate if configured and include cost share subaccounts
+------------------------------------------------------------------------
