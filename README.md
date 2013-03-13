@@ -22,6 +22,9 @@ this README contains several informative sections:
   of patch files is a better reference of which are these revisions.
 * <a href="#files">Lists of Files</a> - These lists contain every file that was created,
   modified, or deleted for this enhancement.
+* <a href="#extra-local-files">List of Local Files</a> - This list contains any extra files that were not
+  explicitly included in the enhancement. The enhancement may rely on these files, and they may
+  not be a part of the original release. They may also include functional and technical specifications.
 
 <h2>Jiras</h2>
 
@@ -153,4 +156,10 @@ Files **modified** for this modification (3 files)
     /work/src/edu/arizona/kfs/gl/GlConstants.java
     /work/src/edu/arizona/kfs/gl/spring-gl.xml
     /work/src/org/kuali/kfs/gl/spring-gl.xml
+
+<h2>Extra Local Files</h2>
+
+Extra local files for this modification that have been included for some reason or another. Most likely, these files are not code, but instead might be specifications, or other documentation. (1 files)
+
+* [`extra_files/KATTS-47.sql`](extra_files/KATTS-47.sql)
 
